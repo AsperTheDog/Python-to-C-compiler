@@ -51,7 +51,7 @@ class VariableManager:
     def addVariableElem(self, varElem: VariableData):
         self.addVariable(varElem.name, varElem.type, varElem.value, varElem.extraData)
 
-    def addVariable(self, name: str, varType: str, value: str, metadata: str = None):
+    def addVariable(self, name: str, varType: str, value: str, metadata: str = None) -> None:
         if varType is None:
             varType = VariableManager.deduceType(value)
         self.variableTable[name] = ((varType, metadata), value)
@@ -75,5 +75,5 @@ class VariableManager:
         return []
 
     @staticmethod
-    def deduceType(value: str):
+    def deduceType(value: str) -> VarTypes | None:
         pass

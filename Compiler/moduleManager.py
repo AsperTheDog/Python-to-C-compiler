@@ -162,8 +162,11 @@ class ModuleManager:
 
     def mergeImports(self) -> CodeManager:
         if self.root not in self.imports:
-            raise AttributeError("Tried to merge imports into non-existing root module. Did you set the correct root module?")
-        imports = self.findRecursiveImports(self.root)
+            raise SyntaxError("Tried to merge imports into non-existing root module. Did you set the correct root module?")
+        try:
+            imports = self.findRecursiveImports(self.root)
+        except RecursionError:
+            raise SyntaxError("Files with recursive imports cannot be compiled")
         imports.append(self.root)
         codeManager = CodeManager()
         for importElem in imports:
