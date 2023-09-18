@@ -128,5 +128,4 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-/files/input/
-/files/output/
+test.py
