@@ -4,6 +4,14 @@ from enum import Enum
 from PythonC.symbolTree.treeElems.baseNode import BaseNode
 
 
+class VarScope(Enum):
+    GLOBAL = 0
+    MAIN = 1
+    FUNCTION = 2
+    CLASS = 3
+    OBJECT = 4
+
+
 class VarType(Enum):
     INT = (r"[0-9]+", "int")
     DOUBLE = (r"[0-9]+\.[0-9]+", "double")
@@ -30,10 +38,11 @@ class VarType(Enum):
 
 
 class Variable:
-    def __init__(self, name: str, hintedType: VarType | None, value: str | None):
+    def __init__(self, name: str, scope: VarScope, hintedType: VarType | None, value: str | None):
         self.name = name
         self.type = hintedType.value[1] if hintedType is not None else None
         self.value = value
+        self.scope = scope
         if self.type is None and self.value is None:
             SyntaxError("Variables must have either type hint or default value")
 

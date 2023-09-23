@@ -21,7 +21,7 @@ class BaseNode:
         self.children[elem.name] = elem
 
     # Finds a specific node given a route
-    def find(self, elems: list[str]) -> BaseNode | None:
+    def find(self, elems: list[str], scopeRestriction=None) -> BaseNode | None:
         nextElem = elems.pop(0)
         if nextElem != self.name:
             return None

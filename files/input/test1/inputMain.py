@@ -11,7 +11,10 @@ def mul(a: int, b: int) -> int:
 y = mul(1, 2)
 
 
-class multiplier:
+class Multiplier:
+    staticA = 2
+    staticB = 3
+
     def __init__(self):
         self.a = 0
         self.b = 0
@@ -23,10 +26,14 @@ class multiplier:
     def mul(self) -> int:
         return mul(self.a, self.b)
 
+    @staticmethod
+    def staticMul() -> int:
+        return mul(Multiplier.staticA, Multiplier.staticB)
 
-mult = multiplier()
+
+mult = Multiplier()
 mult.addAB(x, y)
-mult2 = multiplier()
+mult2 = Multiplier()
 mult2.addAB(y, z)
 
 
