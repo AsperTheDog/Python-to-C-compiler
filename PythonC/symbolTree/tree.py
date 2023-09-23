@@ -174,7 +174,7 @@ class SymbolTree:
                     continue
                 popScope(scope, rootNode)
             # Check if method is static
-            match = re.search(r"@staticmethod", line)
+            match = re.fullmatch(r"\s*@staticmethod", line)
             if match is not None:
                 isNextStatic = True
                 continue
