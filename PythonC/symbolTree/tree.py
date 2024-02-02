@@ -5,6 +5,7 @@ import re
 
 from PythonC.elements.classElem import Class
 from PythonC.elements.functionElem import Function, FuncType
+from PythonC.elements.importElem import Import
 from PythonC.elements.variableElem import Variable, VarType, VarScope
 
 from PythonC.symbolTree.treeElems.baseNode import BaseNode
@@ -57,8 +58,16 @@ class ScopeHandler:
 
 
 class SymbolTree:
+    uniqueID = 0
+
     def __init__(self):
-        self.root = FolderNode("root", None)
+        self.root = FolderNode("root", SymbolTree.getNewID(), None)
+        self.root.tree = self
+
+    @staticmethod
+    def getNewID():
+        SymbolTree.uniqueID += 1
+        return SymbolTree.uniqueID
 
     def findElement(self, path: str) -> BaseNode:
         if path[-1] == '.':
@@ -79,10 +88,10 @@ class SymbolTree:
         self.root.add(node)
 
     def crawlFolder(self, path: Path, parent: BaseNode):
-        rootNode = FolderNode(path.name, parent)
+        rootNode = FolderNode(path.name, SymbolTree.getNewID(), parent)
         dirs = [x for x in path.iterdir() if x.is_dir()]
-        for path in dirs:
-            node = self.crawlFolder(path, rootNode)
+        for folder in dirs:
+            node = self.crawlFolder(folder, rootNode)
             rootNode.add(node)
         files = [x for x in path.iterdir() if x.is_file() and x.match("*.py")]
         for file in files:
@@ -104,8 +113,9 @@ class SymbolTree:
         if not autopep8.check_syntax(code):
             raise SyntaxError("Tried to open file {} with invalid syntax".format(root))
         code = autopep8.fix_code(code)
-        rootNode = ModuleNode(root.name[:-3], parent)
+        rootNode = ModuleNode(root.name[:-3], SymbolTree.getNewID(), parent)
         scope = ScopeHandler()
+        canImport = True
         for line in code.splitlines():
             if len(line) == 0 or line.lstrip()[0] == "#":
                 continue
@@ -113,6 +123,15 @@ class SymbolTree:
                 if scope.addLine(line):
                     continue
                 popScope(scope, rootNode)
+            # Import
+            match = re.fullmatch(ModuleNode.importRegex, line)
+            if match is not None:
+                if not canImport:
+                    raise SyntaxError("Tried to import after code. The compiler only allows imports at the top of the file")
+                imp = Import(match.group(1), match.group(2), match.group(3))
+                rootNode.imports.append(imp)
+                continue
+            canImport = False
             # Function
             match = re.fullmatch(FunctionNode.evaluateRegex, line)
             if match is not None:
@@ -132,7 +151,7 @@ class SymbolTree:
                     rootNode.find([rootNode.name, match.group(1)])
                 except ValueError:
                     var = Variable(match.group(1), VarScope.MAIN, VarType.findFromStr(match.group(2)), match.group(3))
-                    self.addElement(rootNode, VariableNode(var, rootNode))
+                    self.addElement(rootNode, VariableNode(var, SymbolTree.getNewID(), rootNode))
             scope.addLine(line)
         while not scope.isMain():
             popScope(scope, rootNode)
@@ -140,9 +159,9 @@ class SymbolTree:
         return rootNode
 
     def crawlFunction(self, func: Function, parent: BaseNode):
-        rootNode = FunctionNode(func, parent)
+        rootNode = FunctionNode(func, SymbolTree.getNewID(), parent)
         for arg in func.args:
-            self.addElement(rootNode, VariableNode(arg, rootNode))
+            self.addElement(rootNode, VariableNode(arg, SymbolTree.getNewID(), rootNode))
         for line in func.code.splitlines():
             if len(line) == 0 or line.lstrip()[0] == "#":
                 continue
@@ -153,7 +172,7 @@ class SymbolTree:
                     rootNode.find([rootNode.name, match.group(1)])
                 except ValueError:
                     var = Variable(match.group(1), VarScope.FUNCTION, VarType.findFromStr(match.group(2)), match.group(3))
-                    self.addElement(rootNode, VariableNode(var, rootNode))
+                    self.addElement(rootNode, VariableNode(var, SymbolTree.getNewID(), rootNode))
         return rootNode
 
     def crawlClass(self, cls: Class, parent: BaseNode):
@@ -163,7 +182,7 @@ class SymbolTree:
                 elem = self.crawlClassFunc(elem, rootNode)
             self.addElement(rootNode, elem)
 
-        rootNode = ClassNode(cls, parent)
+        rootNode = ClassNode(cls, SymbolTree.getNewID(), parent)
         scope = ScopeHandler()
         isNextStatic = False
         for line in cls.code.splitlines():
@@ -195,15 +214,15 @@ class SymbolTree:
                     rootNode.find([rootNode.name, match.group(1)])
                 except ValueError:
                     var = Variable(match.group(1), VarScope.CLASS, VarType.findFromStr(match.group(2)), match.group(3))
-                    self.addElement(rootNode, VariableNode(var, rootNode))
+                    self.addElement(rootNode, VariableNode(var, SymbolTree.getNewID(), rootNode))
         while not scope.isMain():
             popScope(scope, rootNode)
         return rootNode
 
     def crawlClassFunc(self, func: Function, parent: BaseNode):
-        rootNode = FunctionNode(func, parent)
+        rootNode = FunctionNode(func, SymbolTree.getNewID(), parent)
         for arg in func.args:
-            self.addElement(rootNode, VariableNode(arg, rootNode))
+            self.addElement(rootNode, VariableNode(arg, SymbolTree.getNewID(), rootNode))
         for line in func.code.splitlines():
             if len(line) == 0 or line.lstrip()[0] == "#":
                 continue
@@ -214,7 +233,7 @@ class SymbolTree:
                     rootNode.find([rootNode.name, match.group(1)])
                 except ValueError:
                     var = Variable(match.group(1), VarScope.FUNCTION, VarType.findFromStr(match.group(2)), match.group(3))
-                    self.addElement(rootNode, VariableNode(var, rootNode))
+                    self.addElement(rootNode, VariableNode(var, SymbolTree.getNewID(), rootNode))
             # Class variable
             match = re.fullmatch(VariableNode.objEvaluateRegex, line)
             if match is not None:
@@ -222,5 +241,8 @@ class SymbolTree:
                     rootNode.parent.find([rootNode.parent.name, match.group(1)])
                 except ValueError:
                     var = Variable(match.group(1), VarScope.OBJECT, VarType.findFromStr(match.group(2)), match.group(3))
-                    self.addElement(rootNode.parent, VariableNode(var, rootNode.parent))
+                    self.addElement(rootNode.parent, VariableNode(var, SymbolTree.getNewID(), rootNode.parent))
         return rootNode
+
+    def resolveImports(self):
+        self.root.resolveImports()

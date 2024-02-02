@@ -8,7 +8,7 @@ parser = argparse.ArgumentParser(
     epilog='Made for exploration and educational purposes'
 )
 
-parser.add_argument('target', nargs='?', default='inputMain.py')
+parser.add_argument('target', nargs='?', default='testImport.py')
 parser.add_argument('root', nargs='?', default='files/input/test1')
 
 args = parser.parse_args()

@@ -47,26 +47,30 @@ class Variable:
             SyntaxError("Variables must have either type hint or default value")
 
     def inferTypeFromObj(self, node: BaseNode):
+        varName = self.value
+        match = re.fullmatch(r"([\w\d.]+)\(.*\)", varName)
+        if match is not None:
+            varName = match.group(1)
         try:
-            varName = self.value
-            match = re.fullmatch(r"([\w\d.]+)\(.*\)", varName)
-            if match is not None:
-                varName = match.group(1)
             valueNode = node.tree.findElement(node.parent.route + "." + varName)
-
-            from PythonC.symbolTree.treeElems.variableNode import VariableNode
-            from PythonC.symbolTree.treeElems.functionNode import FunctionNode
-            from PythonC.symbolTree.treeElems.classNode import ClassNode
-            if isinstance(valueNode, VariableNode):
-                valueNode.var.inferFromValue(valueNode)
-                self.type = valueNode.var.type
-            elif isinstance(valueNode, FunctionNode):
-                if valueNode.func.ret is None:
-                    raise SyntaxError("Tried to assign return value of void function")
-                self.type = valueNode.func.ret
-            return
         except ValueError:
-            pass
+            module = node.findParentModule()
+            try:
+                valueNode = module.findImport(varName)
+            except ValueError:
+                return
+
+        from PythonC.symbolTree.treeElems.variableNode import VariableNode
+        from PythonC.symbolTree.treeElems.functionNode import FunctionNode
+        from PythonC.symbolTree.treeElems.classNode import ClassNode
+        if isinstance(valueNode, VariableNode):
+            valueNode.var.inferFromValue(valueNode)
+            self.type = valueNode.var.type
+        elif isinstance(valueNode, FunctionNode):
+            if valueNode.func.ret is None:
+                raise SyntaxError("Tried to assign return value of void function")
+            self.type = valueNode.func.ret
+        return
 
     def inferFromValue(self, node: BaseNode):
         if self.type is not None:

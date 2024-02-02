@@ -16,4 +16,5 @@ class Compiler:
 
     def compile(self):
         self.symbolTree.generateTree(self.root)
+        self.symbolTree.resolveImports()
         self.symbolTree.inferTypes()

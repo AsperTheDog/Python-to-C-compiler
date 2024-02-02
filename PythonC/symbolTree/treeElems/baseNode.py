@@ -5,14 +5,16 @@ from copy import copy
 
 # Base class for the Symbol tree node. Provides some default behavior and variables for node traversal and search
 class BaseNode:
-    def __init__(self, name: str, parent: BaseNode = None):
+    def __init__(self, name: str, uniqueID: int, parent: BaseNode = None):
         self.name = name
         self.children: dict[str: BaseNode] = {}
         self.parent = parent
         self.route = parent.route + "." + name if parent else name
 
         from PythonC.symbolTree.tree import SymbolTree
-        self.tree: SymbolTree | None = None
+        self.tree: SymbolTree = None if self.parent is None or self.parent.tree is None else self.parent.tree
+        self.uniqueName = "obj_" + str(uniqueID)
+        print(self.route, "->", self.uniqueName)
 
     # Adds a child
     def add(self, elem: BaseNode) -> bool:
@@ -38,3 +40,17 @@ class BaseNode:
     def inferTypes(self):
         for child in self.children.values():
             child.inferTypes()
+
+    def resolveImports(self):
+        for child in self.children.values():
+            child.resolveImports()
+
+
+    def findParentModule(self):
+        node = self
+        from PythonC.symbolTree.treeElems.moduleNode import ModuleNode
+        while not isinstance(node, ModuleNode):
+            node = node.parent
+            if node is None:
+                raise ValueError("Could not find parent module")
+        return node

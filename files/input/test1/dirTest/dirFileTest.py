@@ -1,14 +1,6 @@
-import dirTest.dirFileTest
-import dirTest.dirFileTest as test
-from dirTest.dirFileTest import mul as externMul
-from dirTest.dirFileTest import *
-
-from dirTest import dirFileTest
-
 x = 1
 z = x
 bb = 3.0
-other = "String"
 
 
 def mul(a: int, b: int) -> int:
